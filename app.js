@@ -23,10 +23,19 @@ const transporter = nodemailer.createTransport({
 });
 
 // Configuración personalizada de CORS
+const whitelist = process.env.CORS_ORIGIN.split(',');
+
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN,
+  origin: function (origin, callback) {
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   optionsSuccessStatus: 200
 };
+
 app.use(cors(corsOptions));
 // Middleware para parsear JSON
 app.use(express.json());
