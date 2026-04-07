@@ -608,17 +608,21 @@ app.post('/api/whatsapp/enviar-mensaje', formularioLimiter, async (req, res) => 
 app.post('/api/whatsapp/webhook', async (req, res) => {
   const { typeWebhook, senderData, messageData } = req.body;
 
-  // Solo procesar mensajes de texto entrantes
-  if (typeWebhook !== 'incomingMessageReceived' || messageData?.typeMessage !== 'textMessage') {
+  // Solo procesar mensajes de texto entrantes (textMessage = texto normal, extendedTextMessage = desde anuncios de Facebook)
+  const tipoValido = messageData?.typeMessage === 'textMessage' || messageData?.typeMessage === 'extendedTextMessage';
+  if (typeWebhook !== 'incomingMessageReceived' || !tipoValido) {
     return res.status(200).json({ ok: true });
   }
 
   const chatId = senderData.sender;
-  const mensajeUsuario = messageData.textMessageData.textMessage;
+  const mensajeUsuario = messageData.typeMessage === 'extendedTextMessage'
+    ? messageData.extendedTextMessageData.text
+    : messageData.textMessageData.textMessage;
   const idMensaje = req.body.idMessage;
 
   // Números bloqueados (atendidos manualmente)
-  const estaBloqueado = await redis.get(`bloqueado:${chatId}`);
+  const numerosBlockeados = ['+523316891983'].map(n => `${normalizarNumeroMX(n)}@c.us`);
+  const estaBloqueado = numerosBlockeados.includes(chatId) || await redis.get(`bloqueado:${chatId}`);
   if (estaBloqueado) {
     console.log('Número bloqueado, sin respuesta automática:', chatId);
     return res.status(200).json({ ok: true });
