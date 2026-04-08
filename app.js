@@ -671,6 +671,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
     await Promise.all([
       redis.set(`historial:${chatId}`, historialActualizado, { ex: 86400 }),
       enviarWhatsApp(chatId, respuesta),
+      redis.del(`recordatorio:${chatId}`),
     ]);
 
     console.log('Respuesta enviada:', { chatId, agente: config.tipoAgente, escenario: config.tipoEscenario });
@@ -706,6 +707,10 @@ app.post('/api/whatsapp/recordatorio', async (req, res) => {
       const bloqueado = await redis.get(`bloqueado:${chatId}`);
       if (bloqueado) { omitidos.push({ chatId, razon: 'bloqueado' }); continue; }
 
+      // Saltar si ya se envió un recordatorio (el usuario no ha respondido)
+      const yaEnviado = await redis.get(`recordatorio:${chatId}`);
+      if (yaEnviado) { omitidos.push({ chatId, razon: 'ya_recordado' }); continue; }
+
       // Solo recordar si el último mensaje fue hace ≥ 22 h (TTL ≤ 7200 s)
       const ttl = await redis.ttl(key);
       if (ttl < 0 || ttl > 7200) { omitidos.push({ chatId, razon: 'reciente' }); continue; }
@@ -720,9 +725,12 @@ app.post('/api/whatsapp/recordatorio', async (req, res) => {
         { role: 'model', parts: [{ text: mensajeRecordatorio }] },
       ].slice(-20);
 
+      // No resetear TTL del historial — solo el usuario al responder lo resetea
+      // Marcar flag con el mismo TTL restante del historial para que expire junto con la conversación
       await Promise.all([
         enviarWhatsApp(chatId, mensajeRecordatorio),
-        redis.set(key, historialActualizado, { ex: 86400 }),
+        redis.set(key, historialActualizado),
+        redis.set(`recordatorio:${chatId}`, '1', { ex: ttl }),
       ]);
 
       enviados.push(chatId);
