@@ -20,6 +20,7 @@ Single-file Express.js REST API (`app.js`). All logic lives in that one file —
 - `POST /api/configuracion-agente` — Sets active agent config in Redis, seeds chat history, and sends initial WhatsApp message via Green API
 - `POST /api/whatsapp/enviar-mensaje` — Sends an arbitrary WhatsApp message via Green API
 - `POST /api/whatsapp/webhook` — Green API webhook; receives incoming WhatsApp messages, runs them through Gemini, and replies; always returns HTTP 200 to suppress retries
+- `POST /api/whatsapp/recordatorio` — Called by cron; sends a follow-up message to all chats whose last activity was ≥22 h ago (historial TTL ≤ 7200 s); appends the message to chat history and resets TTL; requires `x-cron-secret` header matching `CRON_SECRET` env var; accepts optional `{ mensaje }` body to override the default reminder text
 
 **Middleware stack:** CORS (whitelist from env) → JSON body parser → general rate limiter (100 req/15min) → per-endpoint rate limiters (10 req/hr on form/config/send endpoints; webhook is unlimited)
 
@@ -53,3 +54,4 @@ All required — no defaults except `PORT`:
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token |
 | `GREENAPI_INSTANCE_ID` | Green API WhatsApp instance ID |
 | `GREENAPI_API_TOKEN` | Green API authentication token |
+| `CRON_SECRET` | Secret token required in `x-cron-secret` header to call `/api/whatsapp/recordatorio` |

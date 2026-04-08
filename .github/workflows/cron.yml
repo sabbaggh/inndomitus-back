@@ -1,0 +1,15 @@
+name: Cron 30 Minutos - Follow-up WhatsApp
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  followup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ejecutar follow-up
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            "https://clb-premium-chat.vercel.app/api/whatsapp/recordatorio?secret=${{ secrets.CRON_SECRET }}"
