@@ -12,4 +12,7 @@ jobs:
       - name: Ejecutar follow-up
         run: |
           curl -s -o /dev/null -w "%{http_code}" \
-            "https://inndomitus-back.vercel.app/api/whatsapp/recordatorio?secret=${{ secrets.CRON_SECRET }}"
+            -X POST \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "https://inndomitus-back.vercel.app/api/whatsapp/recordatorio"
