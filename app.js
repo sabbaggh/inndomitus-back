@@ -691,7 +691,7 @@ app.post('/api/whatsapp/recordatorio', async (req, res) => {
     return res.status(401).json({ error: 'No autorizado' });
   }
 
-  const mensajeRecordatorio = req.body.mensaje ||
+  const mensajeRecordatorio = req.body?.mensaje ||
     '¡Hola! Solo quería saber si pudiste revisar lo que platicamos 😊 Quedé pendiente de ayudarte — ¿tienes alguna duda o quieres que avancemos?';
 
   try {
