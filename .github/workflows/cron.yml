@@ -12,4 +12,4 @@ jobs:
       - name: Ejecutar follow-up
         run: |
           curl -s -o /dev/null -w "%{http_code}" \
-            "https://clb-premium-chat.vercel.app/api/whatsapp/recordatorio?secret=${{ secrets.CRON_SECRET }}"
+            "https://inndomitus-back.vercel.app/api/whatsapp/recordatorio?secret=${{ secrets.CRON_SECRET }}"
