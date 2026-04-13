@@ -707,9 +707,13 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
     const systemPrompt = config.contexto
       ? `${systemPromptBase}\n\nContexto del cliente:\n${config.contexto}`
       : systemPromptBase;
+    // Gemini requiere que el historial empiece con role 'user'
+    const primerUser = historialActual.findIndex(m => m.role === 'user');
+    const historialGemini = primerUser > 0 ? historialActual.slice(primerUser) : historialActual;
+
     const chat = geminiModel.startChat({
       systemInstruction: { parts: [{ text: systemPrompt }] },
-      history: historialActual,
+      history: historialGemini,
     });
 
     const resultado = await chat.sendMessage(mensajeUsuario);
