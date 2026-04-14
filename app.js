@@ -585,13 +585,15 @@ app.post('/api/configuracion-agente', formularioLimiter, async (req, res) => {
   }
 
   try {
-    await redis.set('agent:config', { tipoAgente, tipoEscenario, canalContacto, numeroTelefono, contexto: contexto || null });
+    const chatId = `${normalizarNumeroMX(numeroTelefono)}@c.us`;
+
+    // Guardar config por chatId (no global) para que solo afecte a este número
+    await redis.set(`config:${chatId}`, { tipoAgente, tipoEscenario, canalContacto, numeroTelefono, contexto: contexto || null }, { ex: 86400 });
     console.log('Configuración guardada:', { tipoAgente, tipoEscenario, canalContacto, numeroTelefono });
 
     const mensajeInicial = getMensajeInicial(tipoAgente, tipoEscenario);
 
     // Guardar mensaje inicial en el historial (como si lo hubiera enviado el agente)
-    const chatId = `${normalizarNumeroMX(numeroTelefono)}@c.us`;
     const historialKey = `historial:${chatId}`;
     await redis.set(historialKey, [
       { role: 'user', parts: [{ text: 'Inicia la conversación' }] },
@@ -674,14 +676,20 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
   console.log('Mensaje entrante:', { chatId, mensaje: mensajeUsuario });
 
   try {
-    // Obtener configuración del agente activo e historial en paralelo
-    const [agentConfig, historial] = await Promise.all([
-      redis.get('agent:config'),
+    // Obtener configuración por chatId e historial en paralelo
+    const [chatConfig, historial] = await Promise.all([
+      redis.get(`config:${chatId}`),
       redis.get(`historial:${chatId}`),
     ]);
 
-    const config = agentConfig || { tipoAgente: 'inndomitus', tipoEscenario: 'general' };
     const historialActual = historial || [];
+
+    // Si no tiene config propia, es un número orgánico — usar Inndomitus y guardarlo
+    let config = chatConfig;
+    if (!config) {
+      config = { tipoAgente: 'inndomitus', tipoEscenario: 'general' };
+      await redis.set(`config:${chatId}`, config, { ex: 86400 });
+    }
 
     // Saludo fijo de Inndomitus cuando el usuario saluda por primera vez
     const esInndomitus = config.tipoAgente === 'inndomitus';
