@@ -724,7 +724,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
       ...historialActual,
       { role: 'user', parts: [{ text: mensajeUsuario }] },
       { role: 'model', parts: [{ text: respuesta }] },
-    ].slice(-20);
+    ].slice(-30);
 
     await Promise.all([
       redis.set(`historial:${chatId}`, historialActualizado, { ex: 86400 }),
@@ -781,7 +781,7 @@ app.post('/api/whatsapp/recordatorio', async (req, res) => {
       const historialActualizado = [
         ...historial,
         { role: 'model', parts: [{ text: mensajeRecordatorio }] },
-      ].slice(-20);
+      ].slice(-30);
 
       // No resetear TTL del historial — solo el usuario al responder lo resetea
       // Marcar flag con el mismo TTL restante del historial para que expire junto con la conversación
